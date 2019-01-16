@@ -2,7 +2,7 @@
 # AniList.Compare
 ################################################################################
 # @author         Aaron Ma
-# @description    Tool that compares anime ratings between AniList users
+# @description    Tool that provides anime ratings insight for AniList users
 # @date           January 15th, 2019
 ################################################################################
 
@@ -15,6 +15,7 @@ import re
 import sqlite3
 import sys
 import os
+from userData import UserData
 
 ################################################################################
 # Define Global Libraries
@@ -27,10 +28,9 @@ dbName = 'anilistDb'
 ################################################################################
 # Function to set the primary global user name
 def setUser():
+    userInput = input('\nPlease enter your username>> ')
     global user
-    user = input('\nPlease enter your username>> ')
-    if (len(user) < 1):
-        user = 'prismee'
+    user = UserData(userInput)
 
 # Removes generated .json and .sqlite files and exits script
 def quitScript():
@@ -44,10 +44,10 @@ def quitScript():
 
 # Function to query for relevant information from AniListDB
 def getData():
-    print('\nRetrieving data for ' + user + '...')
+    print('\nRetrieving data for ' + user.name + '...')
     # Variables to retrieve from the graph
     variables = {
-        'userName': user
+        'userName': user.name
     }
     # Query message defined as a multi-line string
     query = '''
@@ -62,8 +62,8 @@ def getData():
             }
             lists {
               entries {
-                id
                 media {
+                  id
                   title {
                     romaji
                   }
@@ -82,14 +82,36 @@ def getData():
     # Request info from the following url and save as JSON file
     url = 'https://graphql.anilist.co'
     response = requests.post(url, json={'query': query, 'variables': variables})
-    responseData = response.json()
-    with open(str(user) + '.json', 'w') as outfile:
-        json.dump(responseData, outfile, indent=1)
-        print('Data saved as JSON file to working directory as ' + str(user) + '.json')
+    if (str(response) == '<Response [200]>'):
+        responseData = response.json()
+        with open(user.name + '.json', 'w') as outfile:
+            json.dump(responseData, outfile, indent=1)
+            print('Data saved as JSON file to working directory as ' + user.name + '.json')
+    else:
+        print(user.name + '.json could not be generated, please try again.')
 
 # Function to dump data into an sqlite file
 def dumpData():
     global userNumber
+
+    # Check if a database already exists
+    print('\nChecking if ' + user.name + '.json already exists...')
+    mydir = os.getcwd()
+    existingJson = False
+    for file in os.listdir(mydir):
+        if (file == user.name + '.json'):
+            existingJson = True
+    # If the database already exists, just call appendNormScore function
+    if (existingJson == True):
+        print('\n' + user.name + '.json already exists.')
+
+    # If the database doesn't exist, create it and call appendNormScore function
+    else:
+        print(user.name + '.json does not exist.')
+        print('Creating json for ' + user.name + '...')
+        getData()
+
+
     # Prompt creating DB message
     print('\nCreating ' + dbName + '.sqlite...')
 
@@ -118,10 +140,13 @@ def dumpData():
 
     # Prompt creation of database and adding user
     print('Database ' + dbName + '.sqlite has been created in the working directory.')
-    print('\nAdding ' + user + '.json to ' + dbName + '.sqlite...')
+
+    # Check if json data is available
+
+    print('\nAdding ' + user.name + '.json to ' + dbName + '.sqlite...')
 
     # Parse JSON for relevant information
-    jsonFile = user + '.json'
+    jsonFile = user.name + '.json'
     strData = open(jsonFile).read()
     jsonData = json.loads(strData)
 
@@ -136,7 +161,7 @@ def dumpData():
     # For each data entry of a user, add it to the database
     for data in jsonData['data']['MediaListCollection']['lists']:
         for entry in data['entries']:
-            animeId = entry['id']
+            animeId = entry['media']['id']
             title = entry['media']['title']['romaji']
             score = entry['score']
             # print('Adding...', user, (animeId, title, score))
@@ -153,7 +178,7 @@ def dumpData():
 
 # Function to add normalized scores
 def addNormScore():
-    print('\nAdding normalized scores for ' + user + ' in ' + dbName + '...')
+    print('\nAdding normalized scores for ' + user.name + ' in ' + dbName + '...')
     # Create sqlite file and initialize database cursor
     conn = sqlite3.connect(dbName + '.sqlite')
     cur = conn.cursor()
@@ -183,7 +208,7 @@ def addNormScore():
     conn.commit()
     # Close cursor
     cur.close()
-    print('norm_score added to ' + dbName + '.sqlite for ' + user + '.')
+    print('norm_score added to ' + dbName + '.sqlite for ' + user.name + '.')
 
 # Function to normalize the data retrieved for analysis
 def normData():
@@ -194,26 +219,50 @@ def normData():
     for file in os.listdir(mydir):
         if (file == 'anilistDb.sqlite'):
             existingDb = True
-        if (file == user + '.json'):
+        if (file == user.name + '.json'):
             existingJson = True
     # If the database already exists, just call appendNormScore function
     if (existingDb == True and existingJson == True):
-        print('\n' + dbName + ' and ' + user + '.json already exists.')
+        print('\n' + dbName + ' and ' + user.name + '.json already exists.')
 
     # If the database doesn't exist, create it and call appendNormScore function
     else:
-        print('\n' + dbName + ' or ' + user + '.json does not exist.')
-        print('Creating json for ' + user + '...')
+        print('\n' + dbName + ' or ' + user.name + '.json does not exist.')
+        print('Creating json for ' + user.name + '...')
         getData()
 
-    print('Dumping json data for ' + user + 'to ' + dbName + '.sqlite...')
+    print('\nDumping json data for ' + user.name +  'to ' + dbName + '.sqlite...')
     dumpData()
     # Call normalization functions here
     addNormScore()
 
 # Function to compare primary user with friend
 def friendComp():
-    print('TODO')
+    friendInput = input("\nPlease enter your friend's username>> ")
+
+    # Create sqlite file and initialize database cursor
+    conn = sqlite3.connect(dbName + '.sqlite')
+    cur = conn.cursor()
+    print('\nChecking if ' + user.name + ' is in ' + dbName + '.sqlite...')
+    try:
+        cur.execute('SELECT id FROM User WHERE name = ' + user.name + ';')
+    except:
+        print(user.name + ' is not in ' + dbName + '.sqlite.')
+        print('\nAdding ' + user.name + ' to ' + dbName + '.sqlite...')
+        normData()
+        print(user.name + ' was added to ' + dbName + '.sqlite.')
+    print('\nChecking if ' + friendInput + ' is in ' + dbName + '.sqlite...')
+    try:
+        cur.execute('SELECT id FROM User WHERE name = ' + str(friendInput) + ';')
+    except:
+        print(friendInput + ' is not in ' + dbName + '.sqlite.')
+        print('\nAdding ' + friendInput + ' to ' + dbName + '.sqlite...')
+        primaryUser = user.name
+        user.name = friendInput
+        normData()
+        user.name = primaryUser
+        print(friendInput + ' was added to ' + dbName + '.sqlite.')
+    print('\n' + friendInput + ' is in ' + dbName + '.sqlite.')
 
 ################################################################################
 # Switch Variables and Function
@@ -248,7 +297,7 @@ setUser()
 # Main menu
 while True:
     print('\n================================================')
-    print('Hi ' + user + ', what would you like to do?')
+    print('Hi ' + user.name + ', what would you like to do?')
     print('================================================')
     print('00.  Switch to another user name')
     print('01.  Get data as JSON from AniList servers')
