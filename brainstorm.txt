@@ -1,0 +1,85 @@
+AniList Project - Portfolio
+
+The objective of the AniList Project is to produce a presentable project
+demonstrating the understanding and use of the Python language.
+
+The AniList Project will send queries to AniList's GraphQL to retrieve a user
+account information and process it as a JSON file.  With the information, the
+Python script will parse the JSON file to grab relevant information and conduct
+relevant calculations*.  Once calculated, the information shall be represented
+in a visual manner**.  The final product shall be a URL with three tabs.  The
+first tab requires users to input their username, and a webpage summary will
+show up.  The second tab shall have an option to write in another username name
+to do comparisons with, and display that webpage summary.  The last tab shall
+compare the user against global data to see how much they deviate from the
+norm.
+
+*Relevant calculations currently in brainstorming phase below:
+-  User account comparisons:
+  -  Find all titles that both users have watched
+    -  Calculate how many titles both users have both watched
+    -  Compare scores rated, and calculate how similar each user is
+
+-  Personal Visualizations/Info
+  -  Generate a visual that shows ratings over time
+
+-  Global account comparisons:
+  -  "Are you Unique":  Compare user scores against global graphs per title to
+  calculate how far/often the user deviates from the average.
+  -  "Find Friends":  Based on scores and titles, find user's that have similar
+  interests.
+
+**How to represent the data in a visual manner is currently in brainstorming:
+-  Webpage? Use Flask
+
+Thoughts to consider:
+Do I use SQLite3 to store needed values for comparison? Or is local variables OK?
+- Answer, probably not, the query is already a JSON. As a webtool, the more
+lightweight the better
+
+# Request a User name for comparison
+userCompare = input("Enter username to compare to: ")
+# Statement to aid in quicker troubleshooting
+if (len(userCompare) < 1):
+
+# PERFORM USEFUL CALCULATIONS
+#
+# Define useful variables
+# userTotalScore = 0
+# userCounter = 0
+# compareTotalScore = 0
+# compareCounter = 0
+# userScoreFormat = responseJson1['data']['MediaListCollection']['user']['mediaListOptions']['scoreFormat']
+# userEntries = responseJson1['data']['MediaListCollection']['lists'][0]['entries']
+# compareEntries = responseJson2['data']['MediaListCollection']['lists'][0]['entries']
+# compareScoreFormat = responseJson2['data']['MediaListCollection']['user']['mediaListOptions']['scoreFormat']
+
+# Define useful functions
+# def normScore( )
+# Go through the JSON file for relevant information
+# while True:
+#     # Parse and print relevant info for userInput
+#     for entry in userEntries:
+#         # print('Title: ' + entry['media']['title']['romaji'] + ', Score: ' + str(entry['score']))
+#         userTotalScore += entry['score']
+#         userCounter += 1
+#     print("User:", userInput)
+#     print("Score Format:", userScoreFormat)
+#     print("Total Score:", userTotalScore)
+#     print("Total Completed Titles:", userCounter)
+#     userAverageScore = userTotalScore/userCounter
+#     print("Average Score:", userAverageScore)
+#     # Parse and print relevant info for userCompare
+#     for entry in compareEntries:
+#         # print('Title: ' + entry['media']['title']['romaji'] + ', Score: ' + str(entry['score']))
+#         compareTotalScore += entry['score']
+#         compareCounter += 1
+#     print("User:", userCompare)
+#     print("Score Format:", compareScoreFormat)
+#     print("Total Score:", compareTotalScore)
+#     print("Total Completed Titles:", compareCounter)
+#     compareAverageScore = compareTotalScore/compareCounter
+#     print("Average Score:", compareAverageScore)
+#
+#
+#     break
