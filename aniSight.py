@@ -1,9 +1,13 @@
 ################################################################################
-# AniList.Compare
+# Ani.Sight
 ################################################################################
 # @author         Aaron Ma
 # @description    Tool that provides anime ratings insight for AniList users
 # @date           January 15th, 2019
+#
+# General Notes
+# For print statements:     C = CHECK / P = PASS / F = FAIL
+#                           A = ACTION / S = SUCCESS / E = ERROR
 ################################################################################
 
 ################################################################################
@@ -20,34 +24,88 @@ from userData import UserData
 ################################################################################
 # Define Global Libraries
 ################################################################################
-global dbName
 dbName = 'anilistDb'
 
 ################################################################################
 # Functions
 ################################################################################
-# Function to set the primary global user name
-def setUser():
-    userInput = input('\nPlease enter your username>> ')
+# Checks AniList server if it's a valid user name and sets it as active user
+def checkUser( userName ):
+    print('\n[C] Checking if "' + userName + '" exists in AniList...')
     global user
-    user = UserData(userInput)
-
-# Removes generated .json and .sqlite files and exits script
-def quitScript():
-    mydir = os.getcwd()
-    fileList = [ f for f in os.listdir(mydir) if f.endswith(".json") or f.endswith(".sqlite")]
-    print('\nRemoving generated files from working directory...')
-    for f in fileList:
-        print('Removing: ' + f)
-        os.remove(os.path.join(mydir, f))
-    sys.exit('Exiting now...\n')
-
-# Function to query for relevant information from AniListDB
-def getData():
-    print('\nRetrieving data for ' + user.name + '...')
+    userExists = False
     # Variables to retrieve from the graph
     variables = {
-        'userName': user.name
+        'userName': userName
+    }
+    # Query message defined as a multi-line string
+    query = '''
+        query ($userName: String) {
+          MediaListCollection(userName: $userName, type: ANIME, status: COMPLETED) {
+            user {
+              name
+            }
+          }
+        }
+        '''
+    # Request info from the following url and save info to object
+    url = 'https://graphql.anilist.co'
+    response = requests.post(url, json={'query': query, 'variables': variables})
+    # Return true
+    if (str(response) != '<Response [200]>'):
+        print('[F] "' + userName + '" does not exist in AniList.')
+    else:
+        responseData = response.json()
+        user = responseData['data']['MediaListCollection']['user']['name'];
+        userExists = True
+        print('[P] "' + user + '" exists in AniList.')
+        print('[A] Setting "' + user + '" as active user.')
+    return userExists
+
+# Checks if SQLite database exists or not
+def checkDb():
+    global dbName
+    existingDb = False
+
+    print('\n[C] Checking if ' + dbName + '.sqlite exists...')
+    mydir = os.getcwd()
+    for file in os.listdir(mydir):
+        if (file == dbName + '.sqlite'):
+            existingDb = True
+    if (existingDb == True):
+        print('[P] ' + dbName + '.sqlite exists.')
+    else:
+        print('[F] ' + dbName + '.sqlite does not exist.')
+    return existingDb
+
+# Checks if user is registered in SQLite database
+def checkUserInDb( userName ):
+    global user
+    global dbName
+    existingUserInDb = False
+
+    print('\n[C] Checking if "' + user + '" is in ' + dbName + '.sqlite...')
+    if (checkUser(userName) == True and checkDb() == True):
+        # Connect to SQLite file and initialize database cursor
+        conn = sqlite3.connect(dbName + '.sqlite')
+        cur = conn.cursor()
+        try:
+            cur.execute("SELECT * FROM User WHERE name = '" + user + "'")
+            userCheck = cur.fetchall()
+            userCheckStr = userCheck[0][1]
+            if (userCheckStr == user):
+                print('[P] ' + user + ' exists in ' + dbName + '.sqlite.')
+                existingUserInDb = True
+        except:
+            print('[F] ' + user + ' does not exist in ' + dbName + '.sqlite.')
+    return existingUserInDb
+
+# Gets data from AniList server and dumps it into an SQLite database
+def retrieveData( userName ):
+    print('\n[A] Retrieving AniList data for "' + userName + '"...')
+    # Variables to retrieve from the graph
+    variables = {
+        'userName': userName
     }
     # Query message defined as a multi-line string
     query = '''
@@ -79,41 +137,22 @@ def getData():
           }
         }
         '''
-    # Request info from the following url and save as JSON file
+    # Request info from the following url and save info to object
     url = 'https://graphql.anilist.co'
     response = requests.post(url, json={'query': query, 'variables': variables})
-    if (str(response) == '<Response [200]>'):
-        responseData = response.json()
-        with open(user.name + '.json', 'w') as outfile:
-            json.dump(responseData, outfile, indent=1)
-            print('Data saved as JSON file to working directory as ' + user.name + '.json')
-    else:
-        print(user.name + '.json could not be generated, please try again.')
+    responseData = response.json()
+    with open(userName + '.json', 'w') as outfile:
+        json.dump(responseData, outfile, indent=1)
+        print('[A] ...Data saved as .json as ' + userName + '.json')
+    jsonFile = userName + '.json'
+    strData = open(jsonFile).read()
+    jsonData = json.loads(strData)
 
-# Function to dump data into an sqlite file
-def dumpData():
-    global userNumber
+    # Prompt successful data retrieval
+    print('[S] "' + userName + '" data has been retrieved and stored as .json.')
 
-    # Check if a database already exists
-    print('\nChecking if ' + user.name + '.json already exists...')
-    mydir = os.getcwd()
-    existingJson = False
-    for file in os.listdir(mydir):
-        if (file == user.name + '.json'):
-            existingJson = True
-    # If the database already exists, just call appendNormScore function
-    if (existingJson == True):
-        print('\n' + user.name + '.json already exists.')
-
-    # If the database doesn't exist, create it and call appendNormScore function
-    else:
-        print(user.name + '.json does not exist.')
-        print('Creating json for ' + user.name + '...')
-        getData()
-
-
-    # Prompt creating DB message
-    print('\nCreating ' + dbName + '.sqlite...')
+    # Prompt creation of the database
+    print('\n[A] Appending "' + userName + '" data to ' + dbName + '.sqlite...')
 
     # Create sqlite file and initialize database cursor
     conn = sqlite3.connect(dbName + '.sqlite')
@@ -137,18 +176,6 @@ def dumpData():
             PRIMARY KEY     (user_id, anime_id)
         );
     ''')
-
-    # Prompt creation of database and adding user
-    print('Database ' + dbName + '.sqlite has been created in the working directory.')
-
-    # Check if json data is available
-
-    print('\nAdding ' + user.name + '.json to ' + dbName + '.sqlite...')
-
-    # Parse JSON for relevant information
-    jsonFile = user.name + '.json'
-    strData = open(jsonFile).read()
-    jsonData = json.loads(strData)
 
     # Grab the user info in the entry and assign it to variables to store
     name = jsonData['data']['MediaListCollection']['user']['name'];
@@ -174,7 +201,11 @@ def dumpData():
     cur.close()
 
     # Prompt completion
-    print(name + '.json has been added to ' + dbName + '.sqlite')
+    print('[S] "' + userName + '" has been added to ' + dbName + '.sqlite')
+
+# Creates a UserData object with AniList data as local variables
+def createUserDataObj( userName ):
+    print('\nTODO: "Makes user object with user data"')
 
 # Function to add normalized scores
 def addNormScore():
@@ -236,33 +267,59 @@ def normData():
     # Call normalization functions here
     addNormScore()
 
+
+
+################################################################################
+# Menu Actions
+################################################################################
+# Prompts for a name and checks if it is valid before assigning it a global var
+def setUser():
+    global user
+    user = input('\nPlease enter your username>> ')
+    if (checkUser(user) == True):
+        print('\n[S] User name set to "' + user + '".')
+    else:
+        print('\n[E] Could not set user name: "' + user + '".')
+        setUser()
+
+# Prompts for a user name and adds it to an SQLite database
+def putDataInDb():
+    global user
+    user = input('\nPlease enter username to put in the database>> ')
+    if (checkUser(user) == True):
+        retrieveData(user)
+    else:
+        print('\n[E] Cannot retrieve AniList data for username: "' + user + '".')
+
+# Grabs data from SQLite database and stores it to local variables
+def makeUser():
+    global user
+    user = input('\nPlease enter username to create object for>> ')
+    if (checkUserInDb(user) == True):
+        createUserDataObj(user)
+    else:
+        print('\n[E] Returning to main menu...')
+
+# Function to compare primary user with friend
+def normData():
+    print('TODO')
+
 # Function to compare primary user with friend
 def friendComp():
-    friendInput = input("\nPlease enter your friend's username>> ")
+    print('TODO')
+    # friendInput = input("\nPlease enter your friend's username>> ")
 
-    # Create sqlite file and initialize database cursor
-    conn = sqlite3.connect(dbName + '.sqlite')
-    cur = conn.cursor()
-    print('\nChecking if ' + user.name + ' is in ' + dbName + '.sqlite...')
-    try:
-        cur.execute('SELECT id FROM User WHERE name = ' + user.name + ';')
-    except:
-        print(user.name + ' is not in ' + dbName + '.sqlite.')
-        print('\nAdding ' + user.name + ' to ' + dbName + '.sqlite...')
-        normData()
-        print(user.name + ' was added to ' + dbName + '.sqlite.')
-    print('\nChecking if ' + friendInput + ' is in ' + dbName + '.sqlite...')
-    try:
-        cur.execute('SELECT id FROM User WHERE name = ' + str(friendInput) + ';')
-    except:
-        print(friendInput + ' is not in ' + dbName + '.sqlite.')
-        print('\nAdding ' + friendInput + ' to ' + dbName + '.sqlite...')
-        primaryUser = user.name
-        user.name = friendInput
-        normData()
-        user.name = primaryUser
-        print(friendInput + ' was added to ' + dbName + '.sqlite.')
-    print('\n' + friendInput + ' is in ' + dbName + '.sqlite.')
+# Removes generated .json and .sqlite files and exits script
+def quitScript():
+    mydir = os.getcwd()
+    fileList = [ f for f in os.listdir(mydir) if f.endswith(".json") or f.endswith(".sqlite")]
+    print('\n[A] Removing generated files from working directory...')
+    for f in fileList:
+        print('[A] ...Removing: ' + f)
+        os.remove(os.path.join(mydir, f))
+    sys.exit('[S] Exiting now.\n')
+
+
 
 ################################################################################
 # Switch Variables and Function
@@ -270,8 +327,8 @@ def friendComp():
 # Possible cases to invoke function from main menu
 switcher = {
     '0': setUser,
-    '1': getData,
-    '2': dumpData,
+    '1': putDataInDb,
+    '2': makeUser,
     '3': normData,
     '4': friendComp,
     'q': quitScript,
@@ -289,20 +346,21 @@ def callFunc( argument ):
 ################################################################################
 
 # Welcome message and user info prompt
-print('===========================')
-print('Welcome to AniList.Compare!')
-print('===========================')
+print('=================================================================')
+print('Welcome to Ani.Sight!                                v.01.17.2019')
+print('=================================================================')
 setUser()
 
 # Main menu
 while True:
-    print('\n================================================')
-    print('Hi ' + user.name + ', what would you like to do?')
-    print('================================================')
-    print('00.  Switch to another user name')
-    print('01.  Get data as JSON from AniList servers')
-    print('02.  Dump retrieved data to SQLite database')
-    print('03.  Normalize retrieved JSON data for comparison')
+    print('\n-----------------------------------------------------------------')
+    print('Active user: ' + user)
+    print('What would you like to do?')
+    print('-----------------------------------------------------------------')
+    print('00.  Set user name')
+    print('01.  Put data from AniList servers to SQLite database')
+    print('02.  Create user objects from data in SQLite database')
+    print('03.  Normalize local data for comparison')
     print('04.  Compare with another user')
     print('q.   <<<< Exit >>>>\n')
 

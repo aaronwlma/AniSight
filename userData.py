@@ -5,7 +5,7 @@ class UserData(object):
     pointFormat = ""
 
     # Initialize
-    def __init__(self, name):
+    def __init__(self, name, idMal, pointFormat):
         self.name = name
-        self.idMal = ""
-        self.pointFormat = ""
+        self.idMal = idMal
+        self.pointFormat = pointFormat
