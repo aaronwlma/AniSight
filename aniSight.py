@@ -25,19 +25,19 @@ from userData import UserData
 # Define Global Libraries
 ################################################################################
 dbName = 'anilistDb'
+userAni = ''
+user = ''
 
 ################################################################################
 # Functions
 ################################################################################
-# Checks AniList server if it's a valid user name and sets it as active user
+# Checks AniList server if it's a valid user name
 def checkUser( userName ):
     print('\n[C] Checking if "' + userName + '" exists in AniList...')
-    global user
+    global userAni
     userExists = False
     # Variables to retrieve from the graph
-    variables = {
-        'userName': userName
-    }
+    variables = {'userName': userName}
     # Query message defined as a multi-line string
     query = '''
         query ($userName: String) {
@@ -56,11 +56,21 @@ def checkUser( userName ):
         print('[F] "' + userName + '" does not exist in AniList.')
     else:
         responseData = response.json()
-        user = responseData['data']['MediaListCollection']['user']['name'];
+        userAni = responseData['data']['MediaListCollection']['user']['name'];
         userExists = True
-        print('[P] "' + user + '" exists in AniList.')
-        print('[A] Setting "' + user + '" as active user.')
+        print('[P] "' + userName + '" exists in AniList as ' + userAni)
     return userExists
+
+# Prompts for a name and checks if it is valid before assigning it a global var
+def setUser( userName ):
+    global userAni
+    global user
+    print('\n[A] Setting "' + userAni + '" as active user.')
+    try:
+        user = userAni
+        print('[S] User name set to "' + userAni + '".')
+    except:
+        print('[E] Could not set user name: "' + userName + '".')
 
 # Checks if SQLite database exists or not
 def checkDb():
@@ -80,7 +90,7 @@ def checkDb():
 
 # Checks if user is registered in SQLite database
 def checkUserInDb( userName ):
-    global user
+    # global user
     global dbName
     existingUserInDb = False
 
@@ -272,29 +282,24 @@ def normData():
 ################################################################################
 # Menu Actions
 ################################################################################
-# Prompts for a name and checks if it is valid before assigning it a global var
-def setUser():
-    global user
-    user = input('\nPlease enter your username>> ')
-    if (checkUser(user) == True):
-        print('\n[S] User name set to "' + user + '".')
+def setActiveUser():
+    userIn = input('\nPlease enter your username>> ')
+    if (checkUser(userIn) == True):
+        setUser(userAni)
     else:
-        print('\n[E] Could not set user name: "' + user + '".')
-        setUser()
+        setActiveUser()
 
 # Prompts for a user name and adds it to an SQLite database
 def putDataInDb():
-    global user
-    user = input('\nPlease enter username to put in the database>> ')
-    if (checkUser(user) == True):
-        retrieveData(user)
+    userIn = input('\nPlease enter username to put in the database>> ')
+    if (checkUser(userIn) == True):
+        retrieveData(userAni)
     else:
-        print('\n[E] Cannot retrieve AniList data for username: "' + user + '".')
+        print('\n[E] Cannot retrieve AniList data for username: "' + userIn + '".')
 
 # Grabs data from SQLite database and stores it to local variables
 def makeUser():
-    global user
-    user = input('\nPlease enter username to create object for>> ')
+    userIn = input('\nPlease enter username to create object for>> ')
     if (checkUserInDb(user) == True):
         createUserDataObj(user)
     else:
@@ -326,7 +331,7 @@ def quitScript():
 ################################################################################
 # Possible cases to invoke function from main menu
 switcher = {
-    '0': setUser,
+    '0': setActiveUser,
     '1': putDataInDb,
     '2': makeUser,
     '3': normData,
@@ -349,7 +354,7 @@ def callFunc( argument ):
 print('=================================================================')
 print('Welcome to Ani.Sight!                                v.01.17.2019')
 print('=================================================================')
-setUser()
+setActiveUser()
 
 # Main menu
 while True:
