@@ -342,8 +342,6 @@ def friendComp( userObject, friendObject ):
     for k, v in sortedResults:
         print(k, v)
 
-
-
 ################################################################################
 # Menu Actions
 ################################################################################
@@ -367,6 +365,24 @@ def makeUser():
     userIn = input('\nPlease enter username to create object for>> ')
     createUserDataObj(userIn)
 
+# def normScript():
+
+
+def compareScript():
+    global user
+    tempUser = user
+    compareUser = input('\nPlease enter username to compare to>> ')
+    checkUser(user)
+    retrieveData(user)
+    userObj = createUserDataObj(user)
+    normData(userObj)
+    setUser(compareUser)
+    retrieveData(compareUser)
+    compareObj = createUserDataObj(compareUser)
+    normData(compareObj)
+    friendComp(userObj, compareObj)
+    setUser(tempUser)
+
 def testScript():
     checkUser("prismee")
     retrieveData("Prismee")
@@ -384,7 +400,12 @@ def testScript():
     normData(user02)
     normData(user03)
     normData(user04)
+    friendComp(user01, user02)
     friendComp(user01, user03)
+    friendComp(user01, user04)
+    friendComp(user02, user03)
+    friendComp(user02, user04)
+    friendComp(user03, user04)
 
 # Removes generated .json and .sqlite files and exits script
 def quitScript():
@@ -404,8 +425,8 @@ switcher = {
     '0': setActiveUser,
     '1': putDataInDb,
     '2': makeUser,
-    '3': normData,
-    '4': friendComp,
+    # '3': normData,
+    '4': compareScript,
     'x': testScript,
     'q': quitScript,
     }
