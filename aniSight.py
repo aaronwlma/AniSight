@@ -3,7 +3,7 @@
 ################################################################################
 # @author         Aaron Ma
 # @description    Tool that provides anime ratings insight for AniList users
-# @date           January 15th, 2019
+# @date           January 19th, 2019
 #
 # General Notes
 # For print statements:     C = CHECK / P = PASS / F = FAIL
@@ -20,6 +20,8 @@ import sqlite3
 import sys
 import os
 from userData import UserData
+from animeData import AnimeData
+from compareData import CompareData
 
 ################################################################################
 # Define Global Libraries
@@ -31,11 +33,12 @@ user = ''
 ################################################################################
 # Functions
 ################################################################################
-# Checks AniList server if it's a valid user name
+# Checks AniList server if it's a valid user name and sets userAni to retrieved
 def checkUser( userName ):
-    print('\n[C] Checking if "' + userName + '" exists in AniList...')
     global userAni
     userExists = False
+
+    print('\n[C] Checking if "' + userName + '" exists in AniList...')
     # Variables to retrieve from the graph
     variables = {'userName': userName}
     # Query message defined as a multi-line string
@@ -61,17 +64,6 @@ def checkUser( userName ):
         print('[P] "' + userName + '" exists in AniList as ' + userAni)
     return userExists
 
-# Prompts for a name and checks if it is valid before assigning it a global var
-def setUser( userName ):
-    global userAni
-    global user
-    print('\n[A] Setting "' + userAni + '" as active user.')
-    try:
-        user = userAni
-        print('[S] User name set to "' + userAni + '".')
-    except:
-        print('[E] Could not set user name: "' + userName + '".')
-
 # Checks if SQLite database exists or not
 def checkDb():
     global dbName
@@ -92,23 +84,35 @@ def checkDb():
 def checkUserInDb( userName ):
     # global user
     global dbName
+    global userAni
     existingUserInDb = False
 
-    print('\n[C] Checking if "' + user + '" is in ' + dbName + '.sqlite...')
+    print('\n[C] Checking if "' + userName + '" is in ' + dbName + '.sqlite...')
     if (checkUser(userName) == True and checkDb() == True):
         # Connect to SQLite file and initialize database cursor
         conn = sqlite3.connect(dbName + '.sqlite')
         cur = conn.cursor()
         try:
-            cur.execute("SELECT * FROM User WHERE name = '" + user + "'")
+            cur.execute("SELECT * FROM User WHERE name = '" + userAni + "'")
             userCheck = cur.fetchall()
             userCheckStr = userCheck[0][1]
-            if (userCheckStr == user):
-                print('[P] ' + user + ' exists in ' + dbName + '.sqlite.')
+            if (userCheckStr == userAni):
+                print('[P] ' + userAni + ' exists in ' + dbName + '.sqlite.')
                 existingUserInDb = True
         except:
-            print('[F] ' + user + ' does not exist in ' + dbName + '.sqlite.')
+            print('[F] ' + userName + ' does not exist in ' + dbName + '.sqlite.')
     return existingUserInDb
+
+# Prompts for a name and checks if it is valid before assigning it a global var
+def setUser( userName ):
+    global userAni
+    global user
+    print('\n[A] Setting "' + userName + '" as active user...')
+    if (checkUser(userName) == True):
+        print('\n[S] "' + userAni + '" set as active user.')
+        user = userAni
+    else:
+        print('\n[E] Could not set user name: "' + userName + '".')
 
 # Gets data from AniList server and dumps it into an SQLite database
 def retrieveData( userName ):
@@ -134,6 +138,13 @@ def retrieveData( userName ):
                   id
                   title {
                     romaji
+                  }
+                  meanScore
+                  stats {
+                    scoreDistribution {
+                      score
+                      amount
+                    }
                   }
                 }
                 score
@@ -176,7 +187,18 @@ def retrieveData( userName ):
 
         CREATE TABLE IF NOT EXISTS Anime (
             id                  INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
-            title               TEXT UNIQUE
+            title               TEXT UNIQUE,
+            mean_score          INTEGER,
+            score_10            INTEGER,
+            score_20            INTEGER,
+            score_30            INTEGER,
+            score_40            INTEGER,
+            score_50            INTEGER,
+            score_60            INTEGER,
+            score_70            INTEGER,
+            score_80            INTEGER,
+            score_90            INTEGER,
+            score_100            INTEGER
         );
 
         CREATE TABLE IF NOT EXISTS Score (
@@ -201,9 +223,40 @@ def retrieveData( userName ):
             animeId = entry['media']['id']
             title = entry['media']['title']['romaji']
             score = entry['score']
-            # print('Adding...', user, (animeId, title, score))
-            cur.execute('INSERT OR IGNORE INTO Anime (id, title) VALUES (?,?)', (animeId, title))
             cur.execute('INSERT OR IGNORE INTO Score (user_id, anime_id, score) VALUES (?,?,?)', (userNumber, animeId, score))
+            meanScore = entry['media']['meanScore']
+            score10 = 0
+            score20 = 0
+            score30 = 0
+            score40 = 0
+            score50 = 0
+            score60 = 0
+            score70 = 0
+            score80 = 0
+            score90 = 0
+            score100 = 0
+            for score in entry['media']['stats']['scoreDistribution']:
+                if (score['score'] == 10):
+                    score10 = score['amount']
+                elif (score['score'] == 20):
+                    score20 = score['amount']
+                elif (score['score'] == 30):
+                    score30 = score['amount']
+                elif (score['score'] == 40):
+                    score40 = score['amount']
+                elif (score['score'] == 50):
+                    score50 = score['amount']
+                elif (score['score'] == 60):
+                    score60 = score['amount']
+                elif (score['score'] == 70):
+                    score70 = score['amount']
+                elif (score['score'] == 80):
+                    score80 = score['amount']
+                elif (score['score'] == 90):
+                    score90 = score['amount']
+                elif (score['score'] == 100):
+                    score100 = score['amount']
+            cur.execute('INSERT OR IGNORE INTO Anime (id, title, mean_score, score_10, score_20, score_30, score_40, score_50, score_60, score_70, score_80, score_90, score_100) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)', (animeId, title, meanScore, score10, score20, score30, score40, score50, score60, score70, score80, score90, score100))
 
     # Push changes
     conn.commit()
@@ -215,67 +268,79 @@ def retrieveData( userName ):
 
 # Creates a UserData object with AniList data as local variables
 def createUserDataObj( userName ):
-    print('\nTODO: "Makes user object with user data"')
-
-# Function to add normalized scores
-def addNormScore():
-    print('\nAdding normalized scores for ' + user.name + ' in ' + dbName + '...')
-    # Create sqlite file and initialize database cursor
-    conn = sqlite3.connect(dbName + '.sqlite')
-    cur = conn.cursor()
-    try:
-        cur.execute('ALTER TABLE Score ADD COLUMN norm_score INTEGER;')
-    except:
-        pass
-
-    cur.execute('SELECT point_format FROM User WHERE id = ' + str(userNumber))
-    ptForm = cur.fetchall()
-    ptFormStr = ptForm[0][0]
-    print('Point format is ' + ptFormStr + '.')
-
-    if (ptFormStr == 'POINT_100'):
-        print('Copying points to norm_score...')
-        cur.execute('UPDATE Score SET norm_score = score WHERE user_id = ' + str(userNumber))
-    elif (ptFormStr == 'POINT_10_DECIMAL'):
-        print('Mulitplying points by 10, converting to int, and inserting into norm_score...')
-        cur.execute('UPDATE Score SET norm_score = score*10 WHERE user_id = ' + str(userNumber))
-    elif (ptFormStr == 'POINT_10'):
-        print('Mulitplying points by 10, and inserting into norm_score...')
-    elif (ptFormStr == 'POINT_5'):
-        print('Mulitplying points by 20, and inserting into norm_score...')
-    elif (ptFormStr == 'POINT_3'):
-        print('Mulitplying points by 33, and inserting into norm_score...')
-    # Push changes
-    conn.commit()
-    # Close cursor
-    cur.close()
-    print('norm_score added to ' + dbName + '.sqlite for ' + user.name + '.')
+    print('\n[A] Creating user object from ' + userName + '...')
+    if (checkUserInDb(userName) == True):
+        # Connect to SQLite file and initialize database cursor
+        conn = sqlite3.connect(dbName + '.sqlite')
+        cur = conn.cursor()
+        # Get and store user information
+        cur.execute("SELECT * FROM User WHERE name = '" + userAni + "'")
+        userInfo = cur.fetchall()
+        try:
+            idMalRet = userInfo[0][0]
+            nameRet = userInfo[0][1]
+            pointFormatRet = userInfo[0][2]
+            userObj = UserData(nameRet, idMalRet, pointFormatRet)
+            print('\n[S] User object created with the following parameters:')
+            print('(', userObj.name, userObj.idMal, userObj.pointFormat, ')')
+        except:
+            print('\n[E] User object could not be created.')
+        # Get and store user scores
+        print('\n[A] Adding user score from ' + userName + '...')
+        cur.execute("SELECT * FROM Score WHERE user_id = '" + str(idMalRet) + "'")
+        userScores = cur.fetchall()
+        for entry in userScores:
+            userObj.aniList[entry[1]] = entry[2]
+        return userObj
+    else:
+        print('\n[E] Returning to main menu...')
 
 # Function to normalize the data retrieved for analysis
-def normData():
-    # Check if a database already exists
-    mydir = os.getcwd()
-    existingJson = False
-    existingDb = False
-    for file in os.listdir(mydir):
-        if (file == 'anilistDb.sqlite'):
-            existingDb = True
-        if (file == user.name + '.json'):
-            existingJson = True
-    # If the database already exists, just call appendNormScore function
-    if (existingDb == True and existingJson == True):
-        print('\n' + dbName + ' and ' + user.name + '.json already exists.')
+def normData( userObject ):
+    if (userObject.pointFormat == 'POINT_100'):
+        print('...' + userObject.name + ' point format is out of 100.')
+    elif (userObject.pointFormat == 'POINT_10_DECIMAL'):
+        print('...' + userObject.name + ' point format is out of 10 in decimal.')
+        print('[A] Mulitplying scores by 10 and casting to integer...')
+        for score in userObject.aniList:
+            userObject.aniList[score] = int(userObject.aniList[score]*10)
+    elif (userObject.pointFormat == 'POINT_10'):
+        print('...' + userObject.name + ' point format is out of 10.')
+        print('[A] Mulitplying scores by 10...')
+        for score in userObject.aniList:
+            userObject.aniList[score] = userObject.aniList[score]*10
+    elif (userObject.pointFormat == 'POINT_5'):
+        print('...' + userObject.name + ' point format is out of 5.')
+        print('[A] Mulitplying scores by 20...')
+        for score in userObject.aniList:
+            userObject.aniList[score] = userObject.aniList[score]*20
+    elif ('...' + userObject.pointFormat == 'POINT_3'):
+        print(userObject.name + ' point format is smiley faces.')
+        print('[A] Mulitplying scores by 33...')
+        for score in userObject.aniList:
+            userObject.aniList[score] = userObject.aniList[score]*33
+    print('[S] Scores in ' + userObject.name + ' normalized.')
 
-    # If the database doesn't exist, create it and call appendNormScore function
-    else:
-        print('\n' + dbName + ' or ' + user.name + '.json does not exist.')
-        print('Creating json for ' + user.name + '...')
-        getData()
+# Function to compare primary user with friend
+def friendComp( userObject, friendObject ):
+    print('\n[A] Comparing ' + userObject.name + ' to ' + friendObject.name + '...')
 
-    print('\nDumping json data for ' + user.name +  'to ' + dbName + '.sqlite...')
-    dumpData()
-    # Call normalization functions here
-    addNormScore()
+    compareObject = CompareData(userObject.name, friendObject.name)
+    # Connect to SQLite file and initialize database cursor
+    conn = sqlite3.connect(dbName + '.sqlite')
+    cur = conn.cursor()
+
+    for animeId in userObject.aniList:
+        if animeId in friendObject.aniList:
+            scoreDiff = userObject.aniList[animeId] - friendObject.aniList[animeId]
+            cur.execute("SELECT title FROM Anime WHERE id = '" + str(animeId) + "'")
+            animeTitle = cur.fetchone()
+            compareObject.compareList[animeTitle[0]] = scoreDiff
+            # print(animeTitle[0], scoreDiff)
+    results = compareObject.compareList
+    sortedResults = [(k, results[k]) for k in sorted(results, key=results.get, reverse=True)]
+    for k, v in sortedResults:
+        print(k, v)
 
 
 
@@ -284,9 +349,9 @@ def normData():
 ################################################################################
 def setActiveUser():
     userIn = input('\nPlease enter your username>> ')
-    if (checkUser(userIn) == True):
-        setUser(userAni)
-    else:
+    try:
+        setUser(userIn)
+    except:
         setActiveUser()
 
 # Prompts for a user name and adds it to an SQLite database
@@ -300,19 +365,26 @@ def putDataInDb():
 # Grabs data from SQLite database and stores it to local variables
 def makeUser():
     userIn = input('\nPlease enter username to create object for>> ')
-    if (checkUserInDb(user) == True):
-        createUserDataObj(user)
-    else:
-        print('\n[E] Returning to main menu...')
+    createUserDataObj(userIn)
 
-# Function to compare primary user with friend
-def normData():
-    print('TODO')
-
-# Function to compare primary user with friend
-def friendComp():
-    print('TODO')
-    # friendInput = input("\nPlease enter your friend's username>> ")
+def testScript():
+    checkUser("prismee")
+    retrieveData("Prismee")
+    checkUser("yellokirby")
+    retrieveData("yellokirby")
+    checkUser("mteaheart")
+    retrieveData("mteaheart")
+    checkUser("tofugenes")
+    retrieveData("tofugenes")
+    user01 = createUserDataObj("prismee")
+    user02 = createUserDataObj("yellokirby")
+    user03 = createUserDataObj("mteaheart")
+    user04 = createUserDataObj("tofugenes")
+    normData(user01)
+    normData(user02)
+    normData(user03)
+    normData(user04)
+    friendComp(user01, user03)
 
 # Removes generated .json and .sqlite files and exits script
 def quitScript():
@@ -324,8 +396,6 @@ def quitScript():
         os.remove(os.path.join(mydir, f))
     sys.exit('[S] Exiting now.\n')
 
-
-
 ################################################################################
 # Switch Variables and Function
 ################################################################################
@@ -336,6 +406,7 @@ switcher = {
     '2': makeUser,
     '3': normData,
     '4': friendComp,
+    'x': testScript,
     'q': quitScript,
     }
 
@@ -367,6 +438,7 @@ while True:
     print('02.  Create user objects from data in SQLite database')
     print('03.  Normalize local data for comparison')
     print('04.  Compare with another user')
+    print('x.   Test script')
     print('q.   <<<< Exit >>>>\n')
 
     command = input('Enter selection>> ')
