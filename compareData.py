@@ -1,3 +1,5 @@
+import sqlite3
+
 class CompareData(object):
     # Properities
     name1 = ""
