@@ -35,3 +35,21 @@ def makeUserObj( name ):
 
     # Return userData object
     return userData
+
+# Function to normalize the user object data for analysis
+def normUserData( userObj ):
+    if (userObj.pointFormat == 'POINT_10_DECIMAL'):
+        for score in userObj.aniList:
+            userObj.aniList[score] = int(userObj.aniList[score]*10)
+    elif (userObj.pointFormat == 'POINT_10'):
+        for score in userObj.aniList:
+            userObj.aniList[score] = userObj.aniList[score]*10
+    elif (userObj.pointFormat == 'POINT_5'):
+        for score in userObj.aniList:
+            userObj.aniList[score] = userObj.aniList[score]*20
+    elif (userObj.pointFormat == 'POINT_3'):
+        for score in userObj.aniList:
+            userObj.aniList[score] = userObj.aniList[score]*33
+
+    # Return userData object
+    return userObj
