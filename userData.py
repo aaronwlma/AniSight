@@ -12,7 +12,7 @@ def makeUserObj( name ):
     userData = UserData()
 
     # Connect to SQLite file and initialize database cursor
-    conn = sqlite3.connect('anilistDb.sqlite')
+    conn = sqlite3.connect('aniListDb.sqlite')
     cur = conn.cursor()
 
     # Get and store user information

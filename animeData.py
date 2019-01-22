@@ -12,11 +12,11 @@ def makeAniObj( idMal ):
     animeData = AnimeData()
 
     # Connect to SQLite file and get anime information
-    conn = sqlite3.connect('anilistDb.sqlite')
+    conn = sqlite3.connect('aniListDb.sqlite')
     cur = conn.cursor()
     cur.execute("SELECT * FROM Anime WHERE id = '" + str(idMal) + "'")
     animeInfo = cur.fetchone()
-    
+
     # Store anime information
     animeData.idMal = idMal
     animeData.title = animeInfo[1]
@@ -41,3 +41,20 @@ def makeAniObj( idMal ):
 
     # Return animeData object
     return animeData
+
+def calcStdDev( aniObj ):
+    # Needed Variables
+    mu = aniObj.meanScore
+    dist = aniObj.scoreDist
+    totalNum = 0
+    for k in dist:
+        totalNum += dist[k]
+
+    # Formula for calculating standard deviation
+    stdDev = (((dist['10']*(10-mu)**2 + dist['20']*(20-mu)**2 +
+        dist['30']*(30-mu)**2 + dist['40']*(40-mu)**2 + dist['50']*(50-mu)**2 +
+        dist['60']*(60-mu)**2 + dist['70']*(70-mu)**2 + dist['80']*(80-mu)**2 +
+        dist['90']*(90-mu)**2 + dist['100']*(100-mu)**2) / totalNum)**0.5)
+
+    # Return the standard deviation
+    return stdDev

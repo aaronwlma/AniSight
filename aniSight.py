@@ -245,6 +245,20 @@ def checkUserInDb( userName ):
         print('[F] ' + userName + ' does not exist in aniListDb.sqlite.')
     return existingUserInDb
 
+# Checks user scores against global average, prints titles outside one deviation
+def globalComp( userObj ):
+    print('\n[A] Comparing "' + userObj.name + '" to global scores...')
+    results = userObj.aniList
+    sortedResults = [(k, results[k]) for k in sorted(results, key=results.get, reverse=True)]
+    for k, v in sortedResults:
+        animeObj = makeAniObj(k)
+        stdDev = calcStdDev(animeObj)
+        if (userObj.aniList[k] - stdDev > animeObj.meanScore or userObj.aniList[k] + stdDev < animeObj.meanScore):
+            print('RARE EVENT: ' + animeObj.title)
+            print('...' + userObj.name + ': ' + str(userObj.aniList[k]))
+            print('...Global Avg: ' + str(animeObj.meanScore) + ' // Std Dev: ' + str(stdDev))
+    print('[S] "' + userObj.name + '" comparison to global values completed.')
+
 # Function to compare primary user with friend
 def friendComp( userObj, compObj ):
     print('\n[A] Comparing "' + userObj.name + '" to "' + compObj.name + '"...')
@@ -253,8 +267,9 @@ def friendComp( userObj, compObj ):
     sortedResults = [(k, results[k]) for k in sorted(results, key=results.get, reverse=True)]
     for k, v in sortedResults:
         animeObj = makeAniObj(k)
-        print(animeObj.title + ' // Diff: ' + str(v))
-        print(userObj.name + ': ' + str(userObj.aniList[k]) + ' // ' + compObj.name + ': ' + str(compObj.aniList[k]) + ' // Global Avg: ' + str(animeObj.meanScore))
+        print(animeObj.title)
+        print('...' + userObj.name + ': ' + str(userObj.aniList[k]) + ' // ' + compObj.name + ': ' + str(compObj.aniList[k]))
+        print('...Difference: ' + str(v))
     print('[S] "' + userObj.name + '" comparison to "' + compObj.name + '" completed.')
 
 ################################################################################
@@ -272,6 +287,14 @@ def putDataInDb():
         retrieveData(userIn)
     else:
         print('\n[E] Cannot retrieve AniList data for username: "' + userIn + '".')
+
+# Script that compares user to global values
+def globalScript():
+    userIn = input('\nPlease enter first username>> ')
+    checkUser(userIn)
+    retrieveData(userIn)
+    userObj = normUserData(makeUserObj(userIn))
+    globalComp(userObj)
 
 # Script that compares active user to an input user
 def compareScript():
@@ -330,7 +353,8 @@ def quitScript():
 switcher = {
     '0': verifyUser,
     '1': putDataInDb,
-    '2': compareScript,
+    '2': globalScript,
+    '3': compareScript,
     'x': testScript,
     'q': quitScript,
     }
@@ -359,7 +383,8 @@ while True:
     print('-----------------------------------------------------------------')
     print('00.  Verify username')
     print('01.  Retrieve data from AniList servers to SQLite database')
-    print('02.  Compare two users')
+    print('02.  Compare to global data')
+    print('03.  Compare two users')
     print('x.   Test script')
     print('q.   <<<< Exit >>>>\n')
 
