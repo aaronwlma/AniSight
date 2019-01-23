@@ -1,18 +1,39 @@
+################################################################################
+# Anime Data Object
+################################################################################
+# @author         Aaron Ma
+# @description    Class to define Anime object with associated functions
+# @date           January 23rd, 2019
+################################################################################
+
+################################################################################
+# Import Libraries
+################################################################################
 import sqlite3
 
+################################################################################
+# Variables
+################################################################################
+dbName = 'aniListDb'
+
+################################################################################
+# Object Definition
+################################################################################
 class AnimeData( object ):
-    # Properties
     idMal = 0
     title = ""
     meanScore = 0
     scoreDist = dict()
 
+################################################################################
+# Functions
+################################################################################
 def makeAniObj( idMal ):
     # Initialize blank object
     animeData = AnimeData()
 
     # Connect to SQLite file and get anime information
-    conn = sqlite3.connect('aniListDb.sqlite')
+    conn = sqlite3.connect(dbName + '.sqlite')
     cur = conn.cursor()
     cur.execute("SELECT * FROM Anime WHERE id = '" + str(idMal) + "'")
     animeInfo = cur.fetchone()

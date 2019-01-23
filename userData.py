@@ -1,18 +1,39 @@
+################################################################################
+# User Data Object
+################################################################################
+# @author         Aaron Ma
+# @description    Class to define user object with associated functions
+# @date           January 23rd, 2019
+################################################################################
+
+################################################################################
+# Import Libraries
+################################################################################
 import sqlite3
 
+################################################################################
+# Variables
+################################################################################
+dbName = 'aniListDb'
+
+################################################################################
+# Object Definition
+################################################################################
 class UserData( object ):
-    # Properties
     name = ""
     idMal = 0
     pointFormat = ""
     aniList = dict()
 
+################################################################################
+# Functions
+################################################################################
 def makeUserObj( name ):
     # Initialize blank object
     userData = UserData()
 
     # Connect to SQLite file and initialize database cursor
-    conn = sqlite3.connect('aniListDb.sqlite')
+    conn = sqlite3.connect(dbName + '.sqlite')
     cur = conn.cursor()
 
     # Get and store user information
@@ -36,7 +57,6 @@ def makeUserObj( name ):
     # Return userData object
     return userData
 
-# Function to normalize the user object data for analysis
 def normUserData( userObj ):
     if (userObj.pointFormat == 'POINT_10_DECIMAL'):
         for score in userObj.aniList:

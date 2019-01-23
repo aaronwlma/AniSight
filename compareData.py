@@ -1,9 +1,23 @@
+################################################################################
+# Comparison Data Object
+################################################################################
+# @author         Aaron Ma
+# @description    Class to define comparison results as an object with
+#                 associated functions
+# @date           January 23rd, 2019
+################################################################################
+
+################################################################################
+# Object Definition
+################################################################################
 class CompareData( object ):
-    # Properties
     userObj = ""
     compObj = ""
     compareList = dict()
 
+################################################################################
+# Functions
+################################################################################
 def makeCompObj( userObj, compObj ):
     # Initialize blank object
     compareData = CompareData()

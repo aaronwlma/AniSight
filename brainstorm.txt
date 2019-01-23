@@ -1,8 +1,24 @@
-AniList Project - Portfolio
+################################################################################
+# AniList Project - Ani.Sight
+################################################################################
+# @author         Aaron Ma
+# @description    Webtool that provides anime ratings insight for AniList users
+# @date           January 23rd, 2019
+################################################################################
 
+################################################################################
+# Objectives
+################################################################################
 The objective of the AniList Project is to produce a presentable project
-demonstrating the understanding and use of the Python language.
+demonstrating the understanding and use of the Python language.  The secondary
+objective is to learn other tools that may be helpful in my career.
 
+For aniSight itself, the objective of the tool will be to compare input users
+with 3 categories:  another user, their followed/followers, and global data.
+
+################################################################################
+# Roadmap
+################################################################################
 The AniList Project will send queries to AniList's GraphQL to retrieve a user
 account information and process it as a JSON file.  With the information, the
 Python script will parse the JSON file to grab relevant information and conduct
@@ -83,3 +99,21 @@ if (len(userCompare) < 1):
 #
 #
 #     break
+
+################################################################################
+# Front End Details
+################################################################################
+
+################################################################################
+# Back End Details
+################################################################################
+
+PHASE 1: RETRIEVE FROM ANILIST API, AND STORE DATA TO LOCAL SQL DATABASE
+  -
+
+PHASE 2: RETRIEVE FROM LOCAL SQL DATABASE, AND STORE INTO OBJECTS
+
+
+PHASE 3: USING OBJECT DATA, CALCULATE AND RETURN VALUES
+  - Script:  Script will call relevant function and perform checks
+  - Function:  Function only performs on objects, returns values, no checks
