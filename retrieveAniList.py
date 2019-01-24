@@ -20,7 +20,7 @@ import os
 # Variables
 ################################################################################
 dbName = 'aniListDb'
-menuOn = False
+menuOn = True
 
 ################################################################################
 # Check Functions
@@ -32,10 +32,8 @@ def checkUserName( userName ):
     }
     query = '''
         query ($userName: String) {
-          MediaListCollection(userName: $userName, type: ANIME, status: COMPLETED) {
-            user {
-              name
-            }
+          User(name: $userName) {
+            name
           }
         }
         '''
@@ -43,7 +41,7 @@ def checkUserName( userName ):
     response = requests.post(url, json={'query': query, 'variables': variables})
     if (str(response) == '<Response [200]>'):
         responseData = response.json()
-        userAni = responseData['data']['MediaListCollection']['user']['name'];
+        userAni = responseData['data']['User']['name'];
         if (userName == userAni):
             userExists = True
     return userExists
@@ -69,24 +67,78 @@ def getDataID( userId ):
             user {
               id
               name
+              avatar {
+                large
+                medium
+              }
+              options {
+                titleLanguage
+                profileColor
+              }
               mediaListOptions {
                 scoreFormat
+              }
+              favourites {
+                anime {
+                  nodes {
+                    id
+                    title {
+                      romaji
+                      english
+                      native
+                      userPreferred
+                    }
+                    coverImage {
+                      extraLarge
+                      large
+                      medium
+                      color
+                    }
+                    genres
+                    averageScore
+                    popularity
+                    favourites
+                    stats {
+                      scoreDistribution {
+                        score
+                        amount
+                      }
+                    }
+                    siteUrl
+                  }
+                }
+              }
+              stats {
+                watchedTime
               }
             }
             lists {
               entries {
                 media {
-                  id
-                  title {
-                    romaji
-                  }
-                  meanScore
-                  stats {
-                    scoreDistribution {
-                      score
-                      amount
+                    id
+                    title {
+                      romaji
+                      english
+                      native
+                      userPreferred
                     }
-                  }
+                    coverImage {
+                      extraLarge
+                      large
+                      medium
+                      color
+                    }
+                    genres
+                    averageScore
+                    popularity
+                    favourites
+                    stats {
+                      scoreDistribution {
+                        score
+                        amount
+                      }
+                    }
+                    siteUrl
                 }
                 score
                 completedAt {
@@ -98,7 +150,7 @@ def getDataID( userId ):
             }
           }
         }
-        '''
+    '''
     # Request info from the following url and save info to object
     url = 'https://graphql.anilist.co'
     response = requests.post(url, json={'query': query, 'variables': variables})
@@ -113,38 +165,92 @@ def getDataUN( userName ):
     query = '''
         query ($userName: String) {
           MediaListCollection(userName: $userName, type: ANIME, status: COMPLETED) {
-            user {
-              id
-              name
-              mediaListOptions {
-                scoreFormat
-              }
-            }
-            lists {
-              entries {
-                media {
+                user {
                   id
-                  title {
-                    romaji
+                  name
+                  avatar {
+                    large
+                    medium
                   }
-                  meanScore
+                  options {
+                    titleLanguage
+                    profileColor
+                  }
+                  mediaListOptions {
+                    scoreFormat
+                  }
+                  favourites {
+                    anime {
+                      nodes {
+                        id
+                        title {
+                          romaji
+                          english
+                          native
+                          userPreferred
+                        }
+                        coverImage {
+                          extraLarge
+                          large
+                          medium
+                          color
+                        }
+                        genres
+                        averageScore
+                        popularity
+                        favourites
+                        stats {
+                          scoreDistribution {
+                            score
+                            amount
+                          }
+                        }
+                        siteUrl
+                      }
+                    }
+                  }
                   stats {
-                    scoreDistribution {
-                      score
-                      amount
+                    watchedTime
+                  }
+                }
+                lists {
+                  entries {
+                    media {
+                        id
+                        title {
+                          romaji
+                          english
+                          native
+                          userPreferred
+                        }
+                        coverImage {
+                          extraLarge
+                          large
+                          medium
+                          color
+                        }
+                        genres
+                        averageScore
+                        popularity
+                        favourites
+                        stats {
+                          scoreDistribution {
+                            score
+                            amount
+                          }
+                        }
+                        siteUrl
+                    }
+                    score
+                    completedAt {
+                      year
+                      month
+                      day
                     }
                   }
                 }
-                score
-                completedAt {
-                  year
-                  month
-                  day
-                }
               }
             }
-          }
-        }
         '''
     # Request info from the following url and save info to object
     url = 'https://graphql.anilist.co'
@@ -163,12 +269,22 @@ def putDataInSqlDb( jsonData, dbName ):
         CREATE TABLE IF NOT EXISTS User (
             id                  INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
             name                TEXT UNIQUE,
-            point_format        TEXT
+            point_format        TEXT,
+            avatar_large        TEXT,
+            avatar_medium       TEXT,
+            title_language      TEXT,
+            profile_color       TEXT
         );
 
         CREATE TABLE IF NOT EXISTS Anime (
             id                  INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
-            title               TEXT UNIQUE,
+            title               TEXT,
+            title_eng           TEXT,
+            title_nat           TEXT,
+            cover_image         TEXT,
+            average_score       INTEGER,
+            popularity          INTEGER,
+            favourties          INTEGER,
             mean_score          INTEGER,
             score_10            INTEGER,
             score_20            INTEGER,
@@ -179,14 +295,30 @@ def putDataInSqlDb( jsonData, dbName ):
             score_70            INTEGER,
             score_80            INTEGER,
             score_90            INTEGER,
-            score_100            INTEGER
+            score_100           INTEGER,
+            site_url            TEXT
         );
 
         CREATE TABLE IF NOT EXISTS Score (
-            user_id         INTEGER,
-            anime_id        INTEGER,
-            score           DECIMAL,
-            PRIMARY KEY     (user_id, anime_id)
+            user_id             INTEGER,
+            anime_id            INTEGER,
+            score               DECIMAL,
+            completed_year      INTEGER,
+            completed_month     INTEGER,
+            completed_day       INTEGER,
+            PRIMARY KEY         (user_id, anime_id)
+        );
+
+        CREATE TABLE IF NOT EXISTS User_Favourites (
+            user_id             INTEGER,
+            anime_id            INTEGER,
+            PRIMARY KEY         (user_id, anime_id)
+        );
+
+        CREATE TABLE IF NOT EXISTS Anime_Genres (
+            anime_id            INTEGER,
+            genre_id            INTEGER,
+            PRIMARY KEY         (anime_id, genre_id)
         );
     ''')
 
@@ -277,8 +409,8 @@ def quitScript():
 ################################################################################
 # Possible cases to invoke function from main menu
 switcher = {
-    '0': makeUserData,
-    '1': makeAllData,
+    '0': makeAllData,
+    '1': makeUserData,
     'q': quitScript,
     }
 
@@ -301,8 +433,8 @@ if (menuOn == True):
         print('\n-----------------------------------------------------------------')
         print('What would you like to do?')
         print('-----------------------------------------------------------------')
-        print('00.  Input user data into database')
-        print('01.  Scrape AniList server and put into database')
+        print('00.  Scrape AniList server and put into database')
+        print('01.  Input user data into database')
         print('q.   <<<< Exit >>>>\n')
 
         command = input('Enter selection>> ')
