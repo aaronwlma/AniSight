@@ -15,6 +15,7 @@ import re
 import sqlite3
 import sys
 import os
+import datetime
 from retrieveAniList import *
 from userData import *
 from animeData import *
