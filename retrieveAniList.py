@@ -3,7 +3,7 @@
 ################################################################################
 # @author         Aaron Ma
 # @description    Script that retrieves data from AniList API
-# @date           January 25th, 2019
+# @date           January 26th, 2019
 ################################################################################
 
 ################################################################################
@@ -21,7 +21,7 @@ import datetime
 # Variables
 ################################################################################
 dbName = 'aniListDb'
-menuOn = True
+menuOn = False
 saveJson = False
 removeFilesOnExit = False
 
@@ -67,100 +67,100 @@ def getDataID( userId ):
     query = '''
         query ($userId: Int) {
           MediaListCollection(userId: $userId, type: ANIME, status: COMPLETED) {
-            user {
-              id
-              name
-              avatar {
-                large
-                medium
-              }
-              options {
-                titleLanguage
-                profileColor
-              }
-              mediaListOptions {
-                scoreFormat
-              }
-              favourites {
-                anime {
-                  nodes {
-                    id
-                    title {
-                      romaji
-                      english
-                      native
-                      userPreferred
-                    }
-                    coverImage {
-                      extraLarge
-                      large
-                      medium
-                      color
-                    }
-                    genres
-                    averageScore
-                    popularity
-                    favourites
-                    stats {
-                      scoreDistribution {
-                        score
-                        amount
+                user {
+                  id
+                  name
+                  avatar {
+                    large
+                    medium
+                  }
+                  options {
+                    titleLanguage
+                    profileColor
+                  }
+                  mediaListOptions {
+                    scoreFormat
+                  }
+                  favourites {
+                    anime {
+                      nodes {
+                        id
+                        title {
+                          romaji
+                          english
+                          native
+                          userPreferred
+                        }
+                        coverImage {
+                          extraLarge
+                          large
+                          medium
+                          color
+                        }
+                        genres
+                        averageScore
+                        popularity
+                        favourites
+                        stats {
+                          scoreDistribution {
+                            score
+                            amount
+                          }
+                        }
+                        siteUrl
                       }
                     }
-                    siteUrl
+                  }
+                  stats {
+                    watchedTime
+                  }
+                }
+                lists {
+                  entries {
+                    media {
+                        id
+                        title {
+                          romaji
+                          english
+                          native
+                          userPreferred
+                        }
+                        coverImage {
+                          extraLarge
+                          large
+                          medium
+                          color
+                        }
+                        genres
+                        averageScore
+                        popularity
+                        favourites
+                        stats {
+                          scoreDistribution {
+                            score
+                            amount
+                          }
+                        }
+                        siteUrl
+                    }
+                    score
+                    completedAt {
+                      year
+                      month
+                      day
+                    }
                   }
                 }
               }
-              stats {
-                watchedTime
-              }
             }
-            lists {
-              entries {
-                media {
-                    id
-                    title {
-                      romaji
-                      english
-                      native
-                      userPreferred
-                    }
-                    coverImage {
-                      extraLarge
-                      large
-                      medium
-                      color
-                    }
-                    genres
-                    averageScore
-                    popularity
-                    favourites
-                    stats {
-                      scoreDistribution {
-                        score
-                        amount
-                      }
-                    }
-                    siteUrl
-                }
-                score
-                completedAt {
-                  year
-                  month
-                  day
-                }
-              }
-            }
-          }
-        }
-    '''
+        '''
     # Request info from the following url and save info to object
     url = 'https://graphql.anilist.co'
     response = requests.post(url, json={'query': query, 'variables': variables})
     responseData = response.json()
     jsonData = json.dumps(responseData)
     if (saveJson == True):
-        with open(str(userId) + '.json', 'w') as outfile:
+        with open(str(userName) + '.json', 'w') as outfile:
             json.dump(responseData, outfile, indent=1)
     return jsonData
 
@@ -317,15 +317,11 @@ def makeSqliteDb( dbName ):
             genre_id            INTEGER
         );
 
-        CREATE TABLE IF NOT EXISTS AnimeToGenre (
-            id                  INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
-            anilist_num_anime   INTEGER REFERENCES Anime(anilist_num_anime),
-            genre_id            INTEGER REFERENCES Genre(id)
-        );
-
         CREATE TABLE IF NOT EXISTS Genre (
-            id                  INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-            name                TEXT UNIQUE
+            id                  INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
+            anilist_num_anime   INTEGER,
+            name                TEXT,
+            UNIQUE              (anilist_num_anime, name)
         );
     ''')
 
@@ -399,8 +395,7 @@ def putDataInSqliteDb( jsonData, dbName ):
             cur.execute('INSERT OR IGNORE INTO Anime (title_romaji, title_english, title_native, anilist_num, cover_image, site_url, average_score, popularity, favorited, score_10, score_20, score_30, score_40, score_50, score_60, score_70, score_80, score_90, score_100) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', (titleRomaji, titleEnglish, titleNative, anilistNumAnime, coverImage, siteUrl, averageScore, popularity, favorited, score10, score20, score30, score40, score50, score60, score70, score80, score90, score100))
 
             for genre in entry['media']['genres']:
-                cur.execute('INSERT OR IGNORE INTO Genre (name) VALUES (?)', (genre,))
-                cur.execute('INSERT OR IGNORE INTO AnimeToGenre (anilist_num_anime) VALUES (?)', (anilistNumAnime,))
+                cur.execute('INSERT OR IGNORE INTO Genre (anilist_num_anime, name) VALUES (?,?)', (anilistNumAnime, genre))
 
             # Grab the list info in the entry and assign it to variables to store
             preferredTitle = entry['media']['title']['userPreferred']
@@ -493,7 +488,7 @@ def callFunc( argument ):
 ################################################################################
 if (menuOn == True):
     print('=================================================================')
-    print('Retrieve AniList Data Tool                           v.2019.01.25')
+    print('Retrieve AniList Data Tool                           v.2019.01.26')
     print('=================================================================')
 
     while True:
