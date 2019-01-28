@@ -3,7 +3,7 @@
 ################################################################################
 # @author         Aaron Ma
 # @description    Script that retrieves data from AniList API
-# @date           January 26th, 2019
+# @date           January 28th, 2019
 ################################################################################
 
 ################################################################################
@@ -37,6 +37,7 @@ def checkUserName( userName ):
         query ($userName: String) {
           User(name: $userName) {
             name
+            id
           }
         }
         '''
@@ -60,12 +61,43 @@ def checkSqliteDb( dbName ):
 ################################################################################
 # Retrieval Functions
 ################################################################################
-def getDataID( userId ):
+def getUserId( userName ):
+    userId = 0
+    variables = {
+        'userName': userName
+    }
+    query = '''
+        query ($userName: String) {
+            User(name: $userName) {
+                name
+                id
+            }
+        }
+        '''
+    url = 'https://graphql.anilist.co'
+    response = requests.post(url, json={'query': query, 'variables': variables})
+    responseData = response.json()
+    if (str(response) == '<Response [200]>'):
+        responseData = response.json()
+        userAni = responseData['data']['User']['name'];
+        if (userName == userAni):
+            try:
+                userId = responseData['data']['User']['id']
+            except:
+                userId = 0
+    return userId
+
+def getData( userId ):
     variables = {
         'userId': userId
     }
     query = '''
-        query ($userId: Int) {
+        query ($userId: Int!) {
+          Page {
+                following(userId: $userId) {
+                  id
+                  }
+                }
           MediaListCollection(userId: $userId, type: ANIME, status: COMPLETED) {
                 user {
                   id
@@ -160,111 +192,7 @@ def getDataID( userId ):
     responseData = response.json()
     jsonData = json.dumps(responseData)
     if (saveJson == True):
-        with open(str(userName) + '.json', 'w') as outfile:
-            json.dump(responseData, outfile, indent=1)
-    return jsonData
-
-def getDataUN( userName ):
-    variables = {
-        'userName': userName
-    }
-    query = '''
-        query ($userName: String) {
-          MediaListCollection(userName: $userName, type: ANIME, status: COMPLETED) {
-                user {
-                  id
-                  name
-                  avatar {
-                    large
-                    medium
-                  }
-                  options {
-                    titleLanguage
-                    profileColor
-                  }
-                  mediaListOptions {
-                    scoreFormat
-                  }
-                  favourites {
-                    anime {
-                      nodes {
-                        id
-                        title {
-                          romaji
-                          english
-                          native
-                          userPreferred
-                        }
-                        coverImage {
-                          extraLarge
-                          large
-                          medium
-                          color
-                        }
-                        genres
-                        averageScore
-                        popularity
-                        favourites
-                        stats {
-                          scoreDistribution {
-                            score
-                            amount
-                          }
-                        }
-                        siteUrl
-                      }
-                    }
-                  }
-                  stats {
-                    watchedTime
-                  }
-                }
-                lists {
-                  entries {
-                    media {
-                        id
-                        title {
-                          romaji
-                          english
-                          native
-                          userPreferred
-                        }
-                        coverImage {
-                          extraLarge
-                          large
-                          medium
-                          color
-                        }
-                        genres
-                        averageScore
-                        popularity
-                        favourites
-                        stats {
-                          scoreDistribution {
-                            score
-                            amount
-                          }
-                        }
-                        siteUrl
-                    }
-                    score
-                    completedAt {
-                      year
-                      month
-                      day
-                    }
-                  }
-                }
-              }
-            }
-        '''
-    # Request info from the following url and save info to object
-    url = 'https://graphql.anilist.co'
-    response = requests.post(url, json={'query': query, 'variables': variables})
-    responseData = response.json()
-    jsonData = json.dumps(responseData)
-    if (saveJson == True):
-        with open(str(userName) + '.json', 'w') as outfile:
+        with open(str(userId) + '.json', 'w') as outfile:
             json.dump(responseData, outfile, indent=1)
     return jsonData
 
@@ -273,55 +201,61 @@ def makeSqliteDb( dbName ):
     cur = conn.cursor()
     cur.executescript('''
         CREATE TABLE IF NOT EXISTS User (
-            id                  INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
-            user_name           TEXT,
-            anilist_num         INTEGER UNIQUE,
-            point_format        TEXT,
-            watched_time        INTEGER,
-            title_language      TEXT,
-            profile_color       TEXT,
-            avatar              TEXT
+            id                      INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
+            user_name               TEXT,
+            anilist_num             INTEGER UNIQUE,
+            point_format            TEXT,
+            watched_time            INTEGER,
+            title_language          TEXT,
+            profile_color           TEXT,
+            avatar                  TEXT
         );
 
         CREATE TABLE IF NOT EXISTS List (
-            anilist_num_user    INTEGER,
-            anilist_num_anime   INTEGER,
-            preferred_title     TEXT,
-            score               DECIMAL,
-            completed_date      TEXT,
-            favorite            INTEGER,
-            PRIMARY KEY         (anilist_num_user, anilist_num_anime)
+            anilist_num_user        INTEGER,
+            anilist_num_anime       INTEGER,
+            preferred_title         TEXT,
+            score                   DECIMAL,
+            completed_date          TEXT,
+            favorite                INTEGER,
+            PRIMARY KEY             (anilist_num_user, anilist_num_anime)
         );
 
         CREATE TABLE IF NOT EXISTS Anime (
-            id                  INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
-            title_romaji        TEXT,
-            title_english       TEXT,
-            title_native        TEXT,
-            anilist_num         INTEGER UNIQUE,
-            cover_image         TEXT,
-            site_url            TEXT,
-            average_score       DECIMAL,
-            popularity          INTEGER,
-            favorited           INTEGER,
-            score_10            INTEGER,
-            score_20            INTEGER,
-            score_30            INTEGER,
-            score_40            INTEGER,
-            score_50            INTEGER,
-            score_60            INTEGER,
-            score_70            INTEGER,
-            score_80            INTEGER,
-            score_90            INTEGER,
-            score_100           INTEGER,
-            genre_id            INTEGER
+            id                      INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
+            title_romaji            TEXT,
+            title_english           TEXT,
+            title_native            TEXT,
+            anilist_num             INTEGER UNIQUE,
+            cover_image             TEXT,
+            site_url                TEXT,
+            average_score           INTEGER,
+            popularity              INTEGER,
+            favorited               INTEGER,
+            score_10                INTEGER,
+            score_20                INTEGER,
+            score_30                INTEGER,
+            score_40                INTEGER,
+            score_50                INTEGER,
+            score_60                INTEGER,
+            score_70                INTEGER,
+            score_80                INTEGER,
+            score_90                INTEGER,
+            score_100               INTEGER
         );
 
         CREATE TABLE IF NOT EXISTS Genre (
-            id                  INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
-            anilist_num_anime   INTEGER,
-            name                TEXT,
-            UNIQUE              (anilist_num_anime, name)
+            id                      INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
+            anilist_num_anime       INTEGER,
+            name                    TEXT,
+            UNIQUE                  (anilist_num_anime, name)
+        );
+
+        CREATE TABLE IF NOT EXISTS Following (
+            id                      INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
+            anilist_num_user        INTEGER,
+            anilist_num_following   INTEGER,
+            UNIQUE                  (anilist_num_user, anilist_num_following)
         );
     ''')
 
@@ -347,6 +281,10 @@ def putDataInSqliteDb( jsonData, dbName ):
 
     # Create User table and insert retrieved data
     cur.execute('INSERT OR IGNORE INTO User (user_name, anilist_num, point_format, watched_time, title_language, profile_color, avatar) VALUES (?,?,?,?,?,?,?)', (userName, anilistNumUser, pointFormat, watchedTime, titleLanguage, profileColor, avatar))
+
+    # For each following user, add it to the database
+    for data in jsonLoad['data']['Page']['following']:
+        cur.execute('INSERT OR IGNORE INTO Following (anilist_num_user, anilist_num_following) VALUES (?,?)', (anilistNumUser, data['id']))
 
     # For each list data entry of a user, add it to the database
     for data in jsonLoad['data']['MediaListCollection']['lists']:
@@ -414,6 +352,7 @@ def putDataInSqliteDb( jsonData, dbName ):
     for data in jsonLoad['data']['MediaListCollection']['user']['favourites']['anime']['nodes']:
         idFavorite = data['id']
         cur.execute('UPDATE List SET favorite = 1 WHERE anilist_num_user = ? AND anilist_num_anime = ?', (anilistNumUser, idFavorite))
+
     # Push changes
     conn.commit()
     # Close cursor
@@ -423,8 +362,14 @@ def putDataInSqliteDb( jsonData, dbName ):
 # Exported Functions
 ################################################################################
 def putData( userName, dbName ):
+    data = getData(getUserId(userName))
     makeSqliteDb(dbName)
-    putDataInSqliteDb(getDataUN(userName), dbName)
+    putDataInSqliteDb(data, dbName)
+
+def putDataId( userId, dbName ):
+    data = getData(userId)
+    makeSqliteDb(dbName)
+    putDataInSqliteDb(data, dbName)
 
 ################################################################################
 # GUI Functions
@@ -436,24 +381,23 @@ def makeAllData():
     for i in range(int(start), int(finish) + 1):
         print("Adding user ID '" + str(i) + "' to '" + dbName + ".sqlite'...                ",
             end="", flush=True)
-        putDataInSqliteDb(getDataID(i), dbName)
+        putDataInSqliteDb(getData(i), dbName)
         print("[DONE]")
 
 def makeUserData():
     userIn = input('\nEnter user name>> ')
     print("Adding user name '" + userIn + "' to '" + dbName + ".sqlite'...    ",
         end="", flush=True)
-    if (checkUserName(userIn) == True):
+    try:
         makeSqliteDb(dbName)
-        putDataInSqliteDb(getDataUN(userIn), dbName)
+        putDataInSqliteDb(getData(getUserId(userIn)), dbName)
         print("[DONE]")
-    else:
+    except:
         print("[FAIL]")
 
 def testScript():
-    print("Making blank '" + dbName + ".sqlite'...                ",
+    print("Place troubleshooting functions here...                ",
         end="", flush=True)
-    makeSqliteDb(dbName)
     print("[DONE]")
 
 def quitScript():
@@ -488,7 +432,7 @@ def callFunc( argument ):
 ################################################################################
 if (menuOn == True):
     print('=================================================================')
-    print('Retrieve AniList Data Tool                           v.2019.01.26')
+    print('Retrieve AniList Data Tool                           v.2019.01.28')
     print('=================================================================')
 
     while True:

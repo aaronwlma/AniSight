@@ -4,7 +4,7 @@
 # @author         Aaron Ma
 # @description    Class to define comparison results as an object with
 #                 associated functions
-# @date           January 23rd, 2019
+# @date           January 28th, 2019
 ################################################################################
 
 ################################################################################
@@ -23,8 +23,8 @@ def makeCompObj( userObj, compObj ):
     compareData = CompareData()
 
     # Get and store user information
-    compareData.name1 = userObj.name
-    compareData.name2 = compObj.name
+    compareData.name1 = userObj.userName
+    compareData.name2 = compObj.userName
     compareData.compareList = dict()
 
     # Loop through anime in both lists and calculate the score difference and

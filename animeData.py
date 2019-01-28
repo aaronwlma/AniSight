@@ -3,7 +3,7 @@
 ################################################################################
 # @author         Aaron Ma
 # @description    Class to define Anime object with associated functions
-# @date           January 23rd, 2019
+# @date           January 28th, 2019
 ################################################################################
 
 ################################################################################
@@ -20,40 +20,52 @@ dbName = 'aniListDb'
 # Object Definition
 ################################################################################
 class AnimeData( object ):
-    idMal = 0
-    title = ""
-    meanScore = 0
+    titleRomaji = ""
+    titleEnglish = ""
+    titleNative = ""
+    aniListNum = 0
+    coverImage = ""
+    siteUrl = ""
+    averageScore = 0
+    popularity = 0
+    favorited = 0
     scoreDist = dict()
 
 ################################################################################
 # Functions
 ################################################################################
-def makeAniObj( idMal ):
+def makeAniObj( aniId ):
     # Initialize blank object
     animeData = AnimeData()
 
     # Connect to SQLite file and get anime information
     conn = sqlite3.connect(dbName + '.sqlite')
     cur = conn.cursor()
-    cur.execute("SELECT * FROM Anime WHERE id = '" + str(idMal) + "'")
+    cur.execute("SELECT * FROM Anime WHERE anilist_num = '" + str(aniId) + "'")
     animeInfo = cur.fetchone()
 
     # Store anime information
-    animeData.idMal = idMal
-    animeData.title = animeInfo[1]
-    animeData.meanScore = animeInfo[2]
+    animeData.titleRomaji = animeInfo[1]
+    animeData.titleEnglish = animeInfo[2]
+    animeData.titleNative = animeInfo[3]
+    animeData.aniListNum = aniId
+    animeData.coverImage = animeInfo[5]
+    animeData.siteUrl = animeInfo[6]
+    animeData.averageScore = animeInfo[7]
+    animeData.popularity = animeInfo[8]
+    animeData.favorited = animeInfo[9]
     # Store anime AniList score distribution
     animeData.scoreDist = dict()
-    animeData.scoreDist['10'] = animeInfo[3]
-    animeData.scoreDist['20'] = animeInfo[4]
-    animeData.scoreDist['30'] = animeInfo[5]
-    animeData.scoreDist['40'] = animeInfo[6]
-    animeData.scoreDist['50'] = animeInfo[7]
-    animeData.scoreDist['60'] = animeInfo[8]
-    animeData.scoreDist['70'] = animeInfo[9]
-    animeData.scoreDist['80'] = animeInfo[10]
-    animeData.scoreDist['90'] = animeInfo[11]
-    animeData.scoreDist['100'] = animeInfo[12]
+    animeData.scoreDist['10'] = animeInfo[10]
+    animeData.scoreDist['20'] = animeInfo[11]
+    animeData.scoreDist['30'] = animeInfo[12]
+    animeData.scoreDist['40'] = animeInfo[13]
+    animeData.scoreDist['50'] = animeInfo[14]
+    animeData.scoreDist['60'] = animeInfo[15]
+    animeData.scoreDist['70'] = animeInfo[16]
+    animeData.scoreDist['80'] = animeInfo[17]
+    animeData.scoreDist['90'] = animeInfo[18]
+    animeData.scoreDist['100'] = animeInfo[19]
 
     # Push changes
     conn.commit()
@@ -65,9 +77,10 @@ def makeAniObj( idMal ):
 
 def calcStdDev( aniObj ):
     # Needed Variables
-    mu = aniObj.meanScore
+    mu = aniObj.averageScore
     dist = aniObj.scoreDist
     totalNum = 0
+
     for k in dist:
         totalNum += dist[k]
 

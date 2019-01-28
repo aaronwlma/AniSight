@@ -3,7 +3,7 @@
 ################################################################################
 # @author         Aaron Ma
 # @description    Class to define user object with associated functions
-# @date           January 23rd, 2019
+# @date           January 28th, 2019
 ################################################################################
 
 ################################################################################
@@ -20,9 +20,14 @@ dbName = 'aniListDb'
 # Object Definition
 ################################################################################
 class UserData( object ):
-    name = ""
-    idMal = 0
+    userName = ""
+    aniListNum = 0
     pointFormat = ""
+    watchedTime = 0
+    titleLanguage = ""
+    profileColor = ""
+    avatar = ""
+    following = []
     aniList = dict()
 
 ################################################################################
@@ -37,17 +42,71 @@ def makeUserObj( name ):
     cur = conn.cursor()
 
     # Get and store user information
-    cur.execute("SELECT * FROM User WHERE name = '" + name + "'")
+    cur.execute("SELECT * FROM User WHERE user_name = '" + name + "'")
     userInfo = cur.fetchone()
-    userData.idMal = userInfo[0]
-    userData.name = userInfo[1]
-    userData.pointFormat = userInfo[2]
+    userData.userName = userInfo[1]
+    userData.aniListNum = userInfo[2]
+    userData.pointFormat = userInfo[3]
+    userData.watchedTime = userInfo[4]
+    userData.titleLanguage = userInfo[5]
+    userData.profileColor = userInfo[6]
+    userData.avatar = userInfo[7]
+    userData.following = []
     userData.aniList = dict()
+
+    # Get and store user followers user IDs
+    cur.execute("SELECT * FROM Following WHERE anilist_num_user = '" + str(userData.aniListNum) + "'")
+    followerIds = cur.fetchall()
+    for id in followerIds:
+        userData.following.append(id[2])
+
     # Get and store user AniList information
-    cur.execute("SELECT * FROM Score WHERE user_id = '" + str(userData.idMal) + "'")
+    cur.execute("SELECT * FROM List WHERE anilist_num_user = '" + str(userData.aniListNum) + "'")
     userScores = cur.fetchall()
     for entry in userScores:
-        userData.aniList[entry[1]] = entry[2]
+        userData.aniList[entry[1]] = entry[3]
+
+    # Push changes
+    conn.commit()
+    # Close cursor
+    cur.close()
+
+    # Return userData object
+    return userData
+
+def makeUserObjWithId( userId ):
+    # Initialize blank object
+    userData = UserData()
+
+    # Connect to SQLite file and initialize database cursor
+    conn = sqlite3.connect(dbName + '.sqlite')
+    cur = conn.cursor()
+
+    # Get and store user information
+    cur.execute("SELECT * FROM User WHERE anilist_num = '" + str(userId) + "'")
+    userInfo = cur.fetchone()
+    print(userInfo)
+    userData.userName = userInfo[1]
+    userData.aniListNum = userInfo[2]
+    userData.pointFormat = userInfo[3]
+    userData.watchedTime = userInfo[4]
+    userData.titleLanguage = userInfo[5]
+    userData.profileColor = userInfo[6]
+    userData.avatar = userInfo[7]
+    userData.following = []
+    userData.aniList = dict()
+
+    # Get and store user followers user IDs
+    cur.execute("SELECT * FROM Following WHERE anilist_num_user = '" + str(userData.aniListNum) + "'")
+    followerIds = cur.fetchall()
+    for id in followerIds:
+        userData.following.append(id[2])
+
+    # Get and store user AniList information
+    cur.execute("SELECT * FROM List WHERE anilist_num_user = '" + str(userData.aniListNum) + "'")
+    userScores = cur.fetchall()
+    for entry in userScores:
+        userData.aniList[entry[1]] = entry[3]
 
     # Push changes
     conn.commit()

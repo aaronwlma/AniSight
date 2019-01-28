@@ -3,7 +3,7 @@
 ################################################################################
 # @author         Aaron Ma
 # @description    Tool that provides anime ratings insight for AniList users
-# @date           January 24th, 2019
+# @date           January 28th, 2019
 ################################################################################
 
 ################################################################################
@@ -37,13 +37,16 @@ def friendComp( userObj, compObj ):
     sortedResults = [(k, results[k]) for k in sorted(results, key=results.get, reverse=True)]
     for k, v in sortedResults:
         animeObj = makeAniObj(k)
-        print(animeObj.title)
-        print('...' + userObj.name + ': ' + str(userObj.aniList[k]) + ' // ' + compObj.name + ': ' + str(compObj.aniList[k]))
+        print(animeObj.titleRomaji)
+        print('...' + userObj.userName + ': ' + str(userObj.aniList[k]) + ' // ' + compObj.userName + ': ' + str(compObj.aniList[k]))
         print('...Difference: ' + str(v))
 
 # Function to compare primary user with their followers
 def followComp( userObj ):
-    print('TODO')
+    for userId in userObj.following:
+        putDataId(userId, dbName)
+        userFollowing = normUserData(makeUserObjWithId(userId))
+        friendComp(userObj, userFollowing)
 
 # Function to compare primary user with global values
 def globalComp( userObj ):
@@ -52,10 +55,10 @@ def globalComp( userObj ):
     for k, v in sortedResults:
         animeObj = makeAniObj(k)
         stdDev = calcStdDev(animeObj)
-        if (userObj.aniList[k] - stdDev > animeObj.meanScore or userObj.aniList[k] + stdDev < animeObj.meanScore):
-            print('RARE EVENT: ' + animeObj.title)
-            print('...' + userObj.name + ': ' + str(userObj.aniList[k]))
-            print('...Global Avg: ' + str(animeObj.meanScore) + ' // Std Dev: ' + str(stdDev))
+        if (userObj.aniList[k] - stdDev > animeObj.averageScore or userObj.aniList[k] + stdDev < animeObj.averageScore):
+            print('RARE EVENT: ' + animeObj.titleRomaji)
+            print('...' + userObj.userName + ': ' + str(userObj.aniList[k]))
+            print('...Global Avg: ' + str(animeObj.averageScore) + ' // Std Dev: ' + str(stdDev))
 
 ################################################################################
 # Menu Actions
@@ -65,41 +68,29 @@ def testScript():
     print('\nVerify user and retrieve data from AniList')
     print('------------------------------------------')
     userIn = "Prismee"
-    if (checkUserName(userIn) == True):
-        try:
-            putData(userIn, dbName)
-            print("[PASS] '" + userIn + "' was inserted into '" + dbName + ".sqlite'.")
-        except:
-            print("[FAIL] Could not put '" + userIn + "' into '" + dbName + ".sqlite'.")
-    else:
-        print("[FAIL] '" + userIn + "' does not exist in AniList.")
+    try:
+        putData(userIn, dbName)
+        print("[PASS] '" + userIn + "' was inserted into '" + dbName + ".sqlite'.")
+    except:
+        print("[FAIL] Could not put '" + userIn + "' into '" + dbName + ".sqlite'.")
     userIn = "yellokirby"
-    if (checkUserName(userIn) == True):
-        try:
-            putData(userIn, dbName)
-            print("[PASS] '" + userIn + "' was inserted into '" + dbName + ".sqlite'.")
-        except:
-            print("[FAIL] Could not put '" + userIn + "' into '" + dbName + ".sqlite'.")
-    else:
-        print("[FAIL] '" + userIn + "' does not exist in AniList.")
+    try:
+        putData(userIn, dbName)
+        print("[PASS] '" + userIn + "' was inserted into '" + dbName + ".sqlite'.")
+    except:
+        print("[FAIL] Could not put '" + userIn + "' into '" + dbName + ".sqlite'.")
     userIn = "mteaheart"
-    if (checkUserName(userIn) == True):
-        try:
-            putData(userIn, dbName)
-            print("[PASS] '" + userIn + "' was inserted into '" + dbName + ".sqlite'.")
-        except:
-            print("[FAIL] Could not put '" + userIn + "' into '" + dbName + ".sqlite'.")
-    else:
-        print("[FAIL] '" + userIn + "' does not exist in AniList.")
+    try:
+        putData(userIn, dbName)
+        print("[PASS] '" + userIn + "' was inserted into '" + dbName + ".sqlite'.")
+    except:
+        print("[FAIL] Could not put '" + userIn + "' into '" + dbName + ".sqlite'.")
     userIn = "tofugenes"
-    if (checkUserName(userIn) == True):
-        try:
-            putData(userIn, dbName)
-            print("[PASS] '" + userIn + "' was inserted into '" + dbName + ".sqlite'.")
-        except:
-            print("[FAIL] Could not put '" + userIn + "' into '" + dbName + ".sqlite'.")
-    else:
-        print("[FAIL] '" + userIn + "' does not exist in AniList.")
+    try:
+        putData(userIn, dbName)
+        print("[PASS] '" + userIn + "' was inserted into '" + dbName + ".sqlite'.")
+    except:
+        print("[FAIL] Could not put '" + userIn + "' into '" + dbName + ".sqlite'.")
 
     print('\nCompare test users to friends')
     print('-----------------------------')
@@ -143,65 +134,50 @@ def verifyUser():
 def putDataInDb():
     userIn = input('\nPlease enter username to put in the database>> ')
     print("Inserting '" + userIn + "' into '" + dbName + ".sqlite'...")
-    if (checkUserName(userIn) == True):
-        try:
-            putData(userIn, dbName)
-            print("[PASS] '" + userIn + "' was inserted into '" + dbName + ".sqlite'.")
-        except:
-            print("[FAIL] Could not put '" + userIn + "' into '" + dbName + ".sqlite'.")
-    else:
-        print("[FAIL] '" + userIn + "' does not exist in AniList.")
+    try:
+        putData(userIn, dbName)
+        print("[PASS] '" + userIn + "' was inserted into '" + dbName + ".sqlite'.")
+    except:
+        print("[FAIL] Could not put '" + userIn + "' into '" + dbName + ".sqlite'.")
 
 # Script that compares user to another user
 def compareScript():
     userIn = input('\nPlease enter first username>> ')
     userComp = input('Please enter username to compare to>> ')
     print('Comparing "' + userIn + '" to "' + userComp + '"...')
-    if (checkUserName(userIn) == True):
-        if (checkUserName(userComp) == True):
-            try:
-                putData(userIn, dbName)
-                putData(userComp, dbName)
-                userObj = normUserData(makeUserObj(userIn))
-                compareObj = normUserData(makeUserObj(userComp))
-                friendComp(userObj, compareObj)
-                print("[PASS] '" + userIn + "' object was compared to '" + userComp + "'.")
-            except:
-                print("[FAIL] '" + userIn + "' object could not be compared to '" + userComp + "'.")
-        else:
-            print("[FAIL] '" + userComp + "' does not exist in AniList.")
-    else:
-        print("[FAIL] '" + userIn + "' does not exist in AniList.")
+    try:
+        putData(userIn, dbName)
+        putData(userComp, dbName)
+        userObj = normUserData(makeUserObj(userIn))
+        compareObj = normUserData(makeUserObj(userComp))
+        friendComp(userObj, compareObj)
+        print("[PASS] '" + userIn + "' object was compared to '" + userComp + "'.")
+    except:
+        print("[FAIL] '" + userIn + "' object could not be compared to '" + userComp + "'.")
 
 # Script that compares user to its followed
 def followScript():
     userIn = input('\nPlease enter username>> ')
     print('Comparing "' + userIn + '" to its followed users...')
-    if (checkUserName(userIn) == True):
-        try:
-            putData(userIn, dbName)
-            userObj = normUserData(makeUserObj(userIn))
-            followComp(userObj)
-            print("[PASS] '" + userIn + "' object was compared its followers.")
-        except:
-            print("[FAIL] '" + userIn + "' object could not be compared to its followers.")
-    else:
-        print("[FAIL] '" + userIn + "' does not exist in AniList.")
+    try:
+        putData(userIn, dbName)
+        userObj = normUserData(makeUserObj(userIn))
+        followComp(userObj)
+        print("[PASS] '" + userIn + "' object was compared its followers.")
+    except:
+        print("[FAIL] '" + userIn + "' object could not be compared to its followers.")
 
 # Script that compares user to global values
 def globalScript():
     userIn = input('\nPlease enter username>> ')
     print('Comparing "' + userIn + '" to global values...')
-    if (checkUserName(userIn) == True):
-        try:
-            putData(userIn, dbName)
-            userObj = normUserData(makeUserObj(userIn))
-            globalComp(userObj)
-            print("[PASS] '" + userIn + "' object was compared to global values.")
-        except:
-            print("[FAIL] '" + userIn + "' object could not be compared to global values.")
-    else:
-        print("[FAIL] '" + userIn + "' does not exist in AniList.")
+    try:
+        putData(userIn, dbName)
+        userObj = normUserData(makeUserObj(userIn))
+        globalComp(userObj)
+        print("[PASS] '" + userIn + "' object was compared to global values.")
+    except:
+        print("[FAIL] '" + userIn + "' object could not be compared to global values.")
 
 # Script that quits the program
 def quitScript():
@@ -239,7 +215,7 @@ def callFunc( argument ):
 # Main Menu
 ################################################################################
 print('=======================================================================')
-print('Welcome to Ani.Sight!                                      v.2019.01.23')
+print('Welcome to Ani.Sight!                                      v.2019.01.28')
 print('=======================================================================')
 
 while True:
